@@ -71,7 +71,7 @@ Model ids are `alias/model`: `cc/` Claude Code, `cx/` Codex, `ag/` Antigravity, 
 
 ## OAuth notes
 
-- **Claude**: Anthropic only accepts a localhost redirect, so after sign-in the browser shows a code (or lands on a dead localhost:54545 page whose address bar holds it). Paste the code or the full URL into the dialog.
+- **Claude**: works like 9router. Anthropic only accepts a localhost redirect, so after you approve, the browser goes to `http://localhost:<dashboard port>/oauth/callback`. On the server itself that page completes the sign-in. From another machine it fails to load: copy its address and the dialog finishes by itself (or paste it).
 - **Codex**: OpenAI only accepts `http://localhost:1455/auth/callback`. Run the dashboard on the machine where the browser is, or sign in, copy the full callback URL from the address bar of the error page, and paste it into the dialog. slimrouter extracts the code.
 - **Antigravity and Gemini CLI**: standard Google sign-in; the callback returns to `/oauth/callback` on this server, so use the hostname you opened the dashboard with.
 

@@ -44,7 +44,13 @@ export async function completeAndRecord(input: { code: string; state?: string | 
 }
 
 export function defaultRedirectUri(provider: ProviderDef, origin: string) {
-  return provider.oauth?.fixedRedirect || `${origin}/oauth/callback`;
+  if (provider.oauth?.fixedRedirect) return provider.oauth.fixedRedirect;
+  if (provider.oauth?.localhostRedirect) {
+    const u = new URL(origin);
+    const port = u.port || (u.protocol === "https:" ? "443" : "80");
+    return `http://localhost:${port}/oauth/callback`;
+  }
+  return `${origin}/oauth/callback`;
 }
 
 export function startOAuth(providerId: string, origin: string) {

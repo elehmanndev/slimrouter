@@ -390,7 +390,7 @@ function AddDialog({ provider, onClose, onDone }: { provider: ProviderInfo; onCl
         ) : !oauth ? (
           <div className="flex flex-col gap-2 text-sm">
             {codexHint ? <p className="caption">Codex redirects to localhost:1455. Run this dashboard on the same machine as your browser, or paste the full callback URL below after signing in.</p> : null}
-            {provider.id === "claude" ? <p className="caption">Anthropic only allows a localhost redirect. After sign-in you either see a code to copy, or land on a dead localhost:54545 page. Paste the code, or that page&apos;s full address, below.</p> : null}
+            {provider.id === "claude" ? <p className="caption">Same as 9router: after you approve, Claude sends you to a localhost page that will not load. Copy that page&apos;s address and come back here.</p> : null}
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -404,7 +404,7 @@ function AddDialog({ provider, onClose, onDone }: { provider: ProviderInfo; onCl
             )}
             <div className="grid gap-1.5">
               <Label>{oauth.manualPaste ? "Or paste the code / URL" : "Or paste the callback URL / code"}</Label>
-              <Input value={code} onChange={(e) => setCode(extractCode(e.target.value))} placeholder={oauth.manualPaste ? "code#state or http://localhost:54545/callback?code=…" : "http://localhost:1455/auth/callback?code=…"} autoFocus />
+              <Input value={code} onChange={(e) => setCode(extractCode(e.target.value))} placeholder={oauth.redirectUri.startsWith("http://localhost") ? `${oauth.redirectUri}?code=…` : "code#state"} autoFocus />
             </div>
           </div>
         )}

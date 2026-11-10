@@ -20,6 +20,7 @@ export interface OAuthDef {
   extraAuthParams?: Record<string, string>;
   tokenBody: "json" | "form";
   fixedRedirect?: string; // Codex needs localhost:1455
+  localhostRedirect?: boolean; // redirect to http://localhost:<dashboard port>/oauth/callback
   refreshLeadMs: number;
   maxRefreshAgeMs?: number;
 }
@@ -105,7 +106,9 @@ export const PROVIDERS: Record<string, ProviderDef> = {
       scopes: ["org:create_api_key", "user:profile", "user:inference"],
       extraAuthParams: { code: "true" },
       tokenBody: "json",
-      fixedRedirect: "http://localhost:54545/callback",
+      // Like 9router: Anthropic only allows localhost, so redirect to localhost on the dashboard's
+      // port. Off-box the page fails to load and the user copies its address back into the dialog.
+      localhostRedirect: true,
       refreshLeadMs: 4 * 60 * 60 * 1000,
     },
     models: [
