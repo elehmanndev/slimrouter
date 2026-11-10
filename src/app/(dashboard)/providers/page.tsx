@@ -242,7 +242,7 @@ function AddDialog({ provider, onClose, onDone }: { provider: ProviderInfo; onCl
   const [code, setCode] = useState("");
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
-      if (e.origin === location.origin && e.data?.type === "slimrouter-oauth" && e.data.ok) {
+      if (e.data?.type === "slimrouter-oauth" && e.data.ok) {
         toast.success(`${provider.name} connected`);
         onDone();
       }
@@ -250,6 +250,75 @@ function AddDialog({ provider, onClose, onDone }: { provider: ProviderInfo; onCl
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
   }, [onDone, provider.name]);
+  // Poll the server for the outcome so nothing has to be pasted when the callback reaches us.
+  useEffect(() => {
+    if (!oauth) return;
+    let stop = false;
+    const tick = async () => {
+      if (stop) return;
+      try {
+        const s = await api<{ status: string; name?: string; message?: string }>(`/api/admin/oauth/status?state=${encodeURIComponent(oauth.state)}`);
+        if (s.status === "done") {
+          toast.success(`Connected ${s.name || provider.name}`);
+          onDone();
+          return;
+        }
+        if (s.status === "error") {
+          toast.error(s.message || "Sign-in failed");
+          return;
+        }
+      } catch {
+        /* keep polling */
+      }
+      setTimeout(tick, 1500);
+    };
+    const t = setTimeout(tick, 1500);
+    return () => {
+      stop = true;
+      clearTimeout(t);
+    };
+  }, [oauth, onDone, provider.name]);
+  // Watch the clipboard: when the user copies the dead localhost URL or the code, finish automatically.
+  useEffect(() => {
+    if (!oauth) return;
+    let stop = false;
+    let last = "";
+    const check = async () => {
+      if (stop) return;
+      try {
+        if (document.hasFocus()) {
+          const text = (await navigator.clipboard.readText()).trim();
+          if (text && text !== last) {
+            last = text;
+            const extracted = extractCode(text);
+            const looksLikeCode = /^https?:\/\/localhost/.test(text) || (extracted.includes("#") && extracted.length > 40);
+            if (looksLikeCode) {
+              setCode(extracted);
+              setBusy(true);
+              try {
+                const c = await api<{ name: string }>("/api/admin/oauth/complete", { method: "POST", json: { code: extracted, state: oauth.state } });
+                toast.success(`Connected ${c.name}`);
+                onDone();
+                return;
+              } catch (e) {
+                toast.error((e as Error).message);
+              } finally {
+                setBusy(false);
+              }
+            }
+          }
+        }
+      } catch {
+        /* clipboard permission denied: the paste box still works */
+      }
+      setTimeout(check, 1000);
+    };
+    const t = setTimeout(check, 1000);
+    return () => {
+      stop = true;
+      clearTimeout(t);
+    };
+  }, [oauth, onDone]);
   const start = async () => {
     setBusy(true);
     try {
@@ -321,14 +390,21 @@ function AddDialog({ provider, onClose, onDone }: { provider: ProviderInfo; onCl
         ) : !oauth ? (
           <div className="flex flex-col gap-2 text-sm">
             {codexHint ? <p className="caption">Codex redirects to localhost:1455. Run this dashboard on the same machine as your browser, or paste the full callback URL below after signing in.</p> : null}
-            {provider.id === "claude" ? <p className="caption">Claude shows a code to copy after sign-in. Paste it below.</p> : null}
+            {provider.id === "claude" ? <p className="caption">Anthropic only allows a localhost redirect. After sign-in you either see a code to copy, or land on a dead localhost:54545 page. Paste the code, or that page&apos;s full address, below.</p> : null}
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             <p className="caption">A sign-in window opened. If it did not, <a className="underline" href={oauth.authorizeUrl} target="_blank" rel="noreferrer">open it here</a>.</p>
+            {oauth.redirectUri.startsWith("http://localhost") ? (
+              <p className="caption">
+                After approving you land on a <span className="font-mono">{new URL(oauth.redirectUri).host}</span> page that cannot load. Copy its address (Ctrl+L, Ctrl+C) and come back here: it finishes by itself.
+              </p>
+            ) : (
+              <p className="caption">Finish the sign-in in that window; this dialog closes on its own.</p>
+            )}
             <div className="grid gap-1.5">
-              <Label>{oauth.manualPaste ? "Paste the code shown after sign-in" : "Or paste the callback URL / code"}</Label>
-              <Input value={code} onChange={(e) => setCode(extractCode(e.target.value))} placeholder={oauth.manualPaste ? "code#state" : "http://localhost:1455/auth/callback?code=…"} autoFocus />
+              <Label>{oauth.manualPaste ? "Or paste the code / URL" : "Or paste the callback URL / code"}</Label>
+              <Input value={code} onChange={(e) => setCode(extractCode(e.target.value))} placeholder={oauth.manualPaste ? "code#state or http://localhost:54545/callback?code=…" : "http://localhost:1455/auth/callback?code=…"} autoFocus />
             </div>
           </div>
         )}

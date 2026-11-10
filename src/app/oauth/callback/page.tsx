@@ -14,37 +14,37 @@ function Callback() {
     const id = setTimeout(run, 0);
     return () => clearTimeout(id);
     function run() {
-    const code = params.get("code");
-    const state = params.get("state");
-    const error = params.get("error_description") || params.get("error");
-    if (error) {
-      setStatus("error");
-      setMessage(error);
-      return;
-    }
-    if (!code) {
-      setStatus("error");
-      setMessage("No authorization code in the callback URL.");
-      return;
-    }
-    api<{ name: string }>("/api/admin/oauth/complete", { method: "POST", json: { code, state } })
-      .then((c) => {
-        setStatus("done");
-        setMessage(`Connected ${c.name}. You can close this window.`);
-        try {
-          window.opener?.postMessage({ type: "slimrouter-oauth", ok: true }, location.origin);
-        } catch {
-          /* ignore */
-        }
-        setTimeout(() => {
-          if (window.opener) window.close();
-          else router.push("/providers");
-        }, 1200);
-      })
-      .catch((e: Error) => {
+      const code = params.get("code");
+      const state = params.get("state");
+      const error = params.get("error_description") || params.get("error");
+      if (error) {
         setStatus("error");
-        setMessage(e.message);
-      });
+        setMessage(error);
+        return;
+      }
+      if (!code) {
+        setStatus("error");
+        setMessage("No authorization code in the callback URL.");
+        return;
+      }
+      api<{ name: string }>("/api/admin/oauth/complete", { method: "POST", json: { code, state } })
+        .then((c) => {
+          setStatus("done");
+          setMessage(`Connected ${c.name}. You can close this window.`);
+          try {
+            window.opener?.postMessage({ type: "slimrouter-oauth", ok: true }, "*");
+          } catch {
+            /* ignore */
+          }
+          setTimeout(() => {
+            if (window.opener) window.close();
+            else router.push("/providers");
+          }, 1200);
+        })
+        .catch((e: Error) => {
+          setStatus("error");
+          setMessage(e.message);
+        });
     }
   }, [params, router]);
   return (

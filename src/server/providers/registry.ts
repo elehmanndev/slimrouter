@@ -105,6 +105,7 @@ export const PROVIDERS: Record<string, ProviderDef> = {
       scopes: ["org:create_api_key", "user:profile", "user:inference"],
       extraAuthParams: { code: "true" },
       tokenBody: "json",
+      fixedRedirect: "http://localhost:54545/callback",
       refreshLeadMs: 4 * 60 * 60 * 1000,
     },
     models: [

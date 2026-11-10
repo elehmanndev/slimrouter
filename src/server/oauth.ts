@@ -13,9 +13,34 @@ interface PendingAuth {
 const pending = new Map<string, PendingAuth>();
 const PENDING_TTL_MS = 15 * 60 * 1000;
 
+// state -> outcome, so the dashboard can poll instead of asking the user to paste anything.
+const outcomes = new Map<string, { status: "done" | "error"; connectionId?: string; name?: string; message?: string; at: number }>();
+
 function gc() {
   const now = Date.now();
   for (const [k, v] of pending) if (now - v.createdAt > PENDING_TTL_MS) pending.delete(k);
+  for (const [k, v] of outcomes) if (now - v.at > PENDING_TTL_MS) outcomes.delete(k);
+}
+
+/** Dashboard polls this with the state it got from startOAuth. */
+export function oauthStatus(state: string): { status: "pending" | "done" | "error" | "unknown"; connectionId?: string; name?: string; message?: string } {
+  gc();
+  const o = outcomes.get(state);
+  if (o) return o;
+  return pending.has(state) ? { status: "pending" } : { status: "unknown" };
+}
+
+/** Called by the callback page or a localhost catcher: completes the flow and records the outcome for pollers. */
+export async function completeAndRecord(input: { code: string; state?: string | null }) {
+  const stateHint = input.state || (input.code.includes("#") ? input.code.split("#")[1] : "");
+  try {
+    const c = await completeOAuth(input);
+    if (stateHint) outcomes.set(stateHint, { status: "done", connectionId: c.id, name: c.name, at: Date.now() });
+    return c;
+  } catch (e) {
+    if (stateHint) outcomes.set(stateHint, { status: "error", message: (e as Error).message, at: Date.now() });
+    throw e;
+  }
 }
 
 export function defaultRedirectUri(provider: ProviderDef, origin: string) {

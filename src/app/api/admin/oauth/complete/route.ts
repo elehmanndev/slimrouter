@@ -1,5 +1,5 @@
 import { requireAdmin, readJson, ok, bad } from "@/server/admin";
-import { completeOAuth } from "@/server/oauth";
+import { completeAndRecord as completeOAuth } from "@/server/oauth";
 import { publicConnection } from "@/server/connections";
 import { fetchQuota } from "@/server/quota";
 
