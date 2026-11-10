@@ -10,8 +10,8 @@ const { PROVIDERS } = await import("@/server/providers/registry");
 
 describe("oauth redirect uris", () => {
   it("sends Claude to localhost on the dashboard port, like 9router", () => {
-    expect(defaultRedirectUri(PROVIDERS.claude, "http://192.168.1.45:20129")).toBe("http://localhost:20129/oauth/callback");
-    expect(defaultRedirectUri(PROVIDERS.claude, "https://router.example.com")).toBe("http://localhost:443/oauth/callback");
+    expect(defaultRedirectUri(PROVIDERS.claude, "http://192.168.1.45:20129")).toBe("http://localhost:20129/callback");
+    expect(defaultRedirectUri(PROVIDERS.claude, "https://router.example.com")).toBe("http://localhost:443/callback");
   });
 
   it("keeps the fixed Codex redirect", () => {
@@ -26,7 +26,7 @@ describe("oauth redirect uris", () => {
     const r = startOAuth("claude", "http://192.168.1.45:20129");
     const u = new URL(r.authorizeUrl);
     expect(u.origin + u.pathname).toBe("https://claude.ai/oauth/authorize");
-    expect(u.searchParams.get("redirect_uri")).toBe("http://localhost:20129/oauth/callback");
+    expect(u.searchParams.get("redirect_uri")).toBe("http://localhost:20129/callback");
     expect(u.searchParams.get("code_challenge_method")).toBe("S256");
     expect(u.searchParams.get("code")).toBe("true");
     expect(u.searchParams.get("state")).toBe(r.state);

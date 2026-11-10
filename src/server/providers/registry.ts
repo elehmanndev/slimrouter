@@ -20,7 +20,7 @@ export interface OAuthDef {
   extraAuthParams?: Record<string, string>;
   tokenBody: "json" | "form";
   fixedRedirect?: string; // Codex needs localhost:1455
-  localhostRedirect?: boolean; // redirect to http://localhost:<dashboard port>/oauth/callback
+  localhostRedirect?: boolean; // redirect to http://localhost:<dashboard port>/callback
   refreshLeadMs: number;
   maxRefreshAgeMs?: number;
 }
