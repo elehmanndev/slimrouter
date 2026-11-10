@@ -2,7 +2,7 @@
 
 A small, self-hosted gateway that puts your AI subscriptions and API keys behind one OpenAI, Anthropic and Responses compatible endpoint. Sign in with Claude Code, Codex or Antigravity once, add API keys for anything else, then point Claude Code, Codex CLI, Cursor, OpenCode or any SDK at it.
 
-It is a stripped-down rewrite of the ideas in [9router](https://github.com/decolua/9router): the same OAuth clients and request shaping the official CLIs use, with a much smaller surface and a clean dashboard.
+It is a stripped-down rewrite of the ideas in 9router: the same OAuth clients and request shaping the official CLIs use, with a much smaller surface and a clean dashboard.
 
 ## What it does
 
