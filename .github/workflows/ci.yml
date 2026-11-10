@@ -35,5 +35,11 @@ jobs:
         with:
           context: .
           push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/${{ github.repository }}:latest
+          # amd64 only: arm64 runs under QEMU on GitHub runners and tripled the build time.
+          # Add linux/arm64 back here when someone needs it (Raspberry Pi, Apple Silicon).
+          platforms: linux/amd64
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -33,6 +33,8 @@ docker run -d --name slimrouter -p 20128:20128 \
   ghcr.io/elehmanndev/slimrouter:latest
 ```
 
+The published image is `linux/amd64`. On ARM, build it yourself with `docker compose build`.
+
 Data (SQLite database, session secret) lives in `/data`. Back up that directory and you have everything.
 
 ### Unraid
