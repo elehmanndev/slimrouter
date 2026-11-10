@@ -106,7 +106,7 @@ export const PROVIDERS: Record<string, ProviderDef> = {
       scopes: ["org:create_api_key", "user:profile", "user:inference"],
       extraAuthParams: { code: "true" },
       tokenBody: "json",
-      // Like 9router: Anthropic only allows localhost, so redirect to localhost on the dashboard's
+      // Anthropic only allows localhost, so redirect to localhost on the dashboard's
       // port. Off-box the page fails to load and the user copies its address back into the dialog.
       localhostRedirect: true,
       refreshLeadMs: 4 * 60 * 60 * 1000,

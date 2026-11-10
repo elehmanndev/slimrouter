@@ -48,7 +48,7 @@ export function defaultRedirectUri(provider: ProviderDef, origin: string) {
   if (provider.oauth?.localhostRedirect) {
     const u = new URL(origin);
     const port = u.port || (u.protocol === "https:" ? "443" : "80");
-    // Anthropic's allowlist is localhost on any port with the exact path /callback (what 9router sends).
+    // Anthropic's allowlist is localhost on any port with the exact path /callback.
     return `http://localhost:${port}/callback`;
   }
   return `${origin}/oauth/callback`;

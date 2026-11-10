@@ -390,7 +390,7 @@ function AddDialog({ provider, onClose, onDone }: { provider: ProviderInfo; onCl
         ) : !oauth ? (
           <div className="flex flex-col gap-2 text-sm">
             {codexHint ? <p className="caption">Codex redirects to localhost:1455. Run this dashboard on the same machine as your browser, or paste the full callback URL below after signing in.</p> : null}
-            {provider.id === "claude" ? <p className="caption">Same as 9router: after you approve, Claude sends you to a localhost page that will not load. Copy that page&apos;s address and come back here.</p> : null}
+            {provider.id === "claude" ? <p className="caption">After you approve, Claude sends you to a localhost page that will not load. Copy that page&apos;s address and come back here.</p> : null}
           </div>
         ) : (
           <div className="flex flex-col gap-3">
