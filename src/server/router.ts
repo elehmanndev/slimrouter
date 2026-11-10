@@ -92,22 +92,18 @@ export async function selectConnection(providerId: string, model: string | null,
     const strat = strategyFor(providerId);
     let chosen: Connection;
     if (strat.strategy === "round-robin") {
-      const byRecency = [...available].sort((a, b) => {
-        const ta = a.data.lastUsedAt ? Date.parse(a.data.lastUsedAt) : 0;
-        const tb = b.data.lastUsedAt ? Date.parse(b.data.lastUsedAt) : 0;
-        return tb - ta || a.priority - b.priority;
-      });
+      // Two requests can land in the same millisecond, so a tie on lastUsedAt is broken by the
+      // consecutive counter: the account with the running streak is the current one.
+      const used = (c: Connection) => (c.data.lastUsedAt ? Date.parse(c.data.lastUsedAt) : 0);
+      const streak = (c: Connection) => c.data.consecutiveUseCount || 0;
+      const byRecency = [...available].sort((a, b) => used(b) - used(a) || streak(b) - streak(a) || a.priority - b.priority);
       const current = byRecency[0];
-      const count = current.data.consecutiveUseCount || 0;
+      const count = streak(current);
       if (current.data.lastUsedAt && count < strat.stickyLimit) {
         chosen = current;
         patchConnectionData(chosen.id, { lastUsedAt: new Date().toISOString(), consecutiveUseCount: count + 1 });
       } else {
-        const oldestFirst = [...available].sort((a, b) => {
-          const ta = a.data.lastUsedAt ? Date.parse(a.data.lastUsedAt) : 0;
-          const tb = b.data.lastUsedAt ? Date.parse(b.data.lastUsedAt) : 0;
-          return ta - tb || a.priority - b.priority;
-        });
+        const oldestFirst = [...available].sort((a, b) => used(a) - used(b) || streak(a) - streak(b) || a.priority - b.priority);
         chosen = oldestFirst[0];
         patchConnectionData(chosen.id, { lastUsedAt: new Date().toISOString(), consecutiveUseCount: 1 });
       }
