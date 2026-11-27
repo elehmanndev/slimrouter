@@ -267,8 +267,8 @@ export async function refreshConnection(c: Connection): Promise<ConnectionData |
       client_id: o.clientId,
     };
     if (o.clientSecret) payload.client_secret = o.clientSecret;
-    if (provider.id === "codex") payload.scope = o.scopes.join(" ");
-    const json = o.tokenBody === "json" || provider.id === "codex";
+    if (o.refreshScope) payload.scope = o.scopes.join(" ");
+    const json = (o.refreshBody ?? o.tokenBody) === "json";
     const res = await fetch(o.tokenUrl, {
       method: "POST",
       headers: {

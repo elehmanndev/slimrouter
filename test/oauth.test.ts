@@ -25,12 +25,22 @@ describe("oauth redirect uris", () => {
   it("builds a Claude authorize url with PKCE and a pollable state", () => {
     const r = startOAuth("claude", "http://192.168.1.45:20129");
     const u = new URL(r.authorizeUrl);
-    expect(u.origin + u.pathname).toBe("https://claude.ai/oauth/authorize");
+    expect(u.origin + u.pathname).toBe("https://claude.com/cai/oauth/authorize");
     expect(u.searchParams.get("redirect_uri")).toBe("http://localhost:20129/callback");
     expect(u.searchParams.get("code_challenge_method")).toBe("S256");
     expect(u.searchParams.get("code")).toBe("true");
     expect(u.searchParams.get("state")).toBe(r.state);
     expect(oauthStatus(r.state).status).toBe("pending");
     expect(oauthStatus("nope").status).toBe("unknown");
+  });
+
+  it("uses the token endpoint Claude Code uses today", () => {
+    expect(PROVIDERS.claude.oauth?.tokenUrl).toBe("https://platform.claude.com/v1/oauth/token");
+  });
+
+  it("refreshes Codex with a JSON body and its scopes, as before", () => {
+    expect(PROVIDERS.codex.oauth?.tokenBody).toBe("form");
+    expect(PROVIDERS.codex.oauth?.refreshBody).toBe("json");
+    expect(PROVIDERS.codex.oauth?.refreshScope).toBe(true);
   });
 });
