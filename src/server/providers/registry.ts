@@ -18,7 +18,9 @@ export interface OAuthDef {
   tokenUrl: string;
   scopes: string[];
   extraAuthParams?: Record<string, string>;
-  tokenBody: "json" | "form";
+  tokenBody: "json" | "form"; // authorization code exchange
+  refreshBody?: "json" | "form"; // refresh grant, defaults to tokenBody
+  refreshScope?: boolean; // send the scopes again on refresh
   fixedRedirect?: string; // Codex needs localhost:1455
   localhostRedirect?: boolean; // redirect to http://localhost:<dashboard port>/callback
   refreshLeadMs: number;
@@ -101,8 +103,9 @@ export const PROVIDERS: Record<string, ProviderDef> = {
     oauth: {
       flow: "pkce",
       clientId: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
-      authorizeUrl: "https://claude.ai/oauth/authorize",
-      tokenUrl: "https://api.anthropic.com/v1/oauth/token",
+      // Same endpoints as Claude Code 2.1.x (CLAUDE_AI_AUTHORIZE_URL and TOKEN_URL in its bundle).
+      authorizeUrl: "https://claude.com/cai/oauth/authorize",
+      tokenUrl: "https://platform.claude.com/v1/oauth/token",
       scopes: ["org:create_api_key", "user:profile", "user:inference"],
       extraAuthParams: { code: "true" },
       tokenBody: "json",
@@ -145,7 +148,10 @@ export const PROVIDERS: Record<string, ProviderDef> = {
         codex_cli_simplified_flow: "true",
         originator: "codex_cli_rs",
       },
+      // The Codex CLI exchanges the code as a form but refreshes with a JSON body.
       tokenBody: "form",
+      refreshBody: "json",
+      refreshScope: true,
       fixedRedirect: "http://localhost:1455/auth/callback",
       refreshLeadMs: 10 * 60 * 1000,
       maxRefreshAgeMs: 8 * 24 * 60 * 60 * 1000,
