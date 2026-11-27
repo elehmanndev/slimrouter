@@ -37,7 +37,7 @@ interface Conn {
   email: string | null;
   priority: number;
   isActive: boolean;
-  data: { lastError?: string | null; lockedUntil?: string | null; modelLocks?: Record<string, string>; expiresAt?: string | null; apiKeyPreview?: string | null; planType?: string | null; lastUsedAt?: string | null };
+  data: { lastError?: string | null; reauthRequired?: boolean; lockedUntil?: string | null; modelLocks?: Record<string, string>; expiresAt?: string | null; apiKeyPreview?: string | null; planType?: string | null; lastUsedAt?: string | null };
   quota: QuotaSnapshot | null;
 }
 interface Strategy {
@@ -204,6 +204,7 @@ function ConnectionRow({ c, index, count, onMove, onChange }: { c: Conn; index: 
             {c.data.planType ? ` · ${c.data.planType}` : ""}
             {c.data.lastUsedAt ? ` · used ${fmtRelative(c.data.lastUsedAt)}` : ""}
           </p>
+          {c.data.reauthRequired ? <p className="truncate text-xs font-medium text-destructive">Sign in again: the provider rejected the refresh token</p> : null}
           {c.data.lastError ? <p className="truncate text-xs text-destructive">{c.data.lastError}</p> : null}
         </div>
       </div>
