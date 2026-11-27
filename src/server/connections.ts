@@ -20,6 +20,7 @@ export interface ConnectionData {
   backoffLevel?: number;
   lastError?: string | null;
   lastErrorAt?: string | null;
+  reauthRequired?: boolean; // refresh token rejected for good: sign in again
   pausedByGuard?: { reason: string; until: string | null } | null;
 }
 

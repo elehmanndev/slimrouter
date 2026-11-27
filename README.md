@@ -77,7 +77,7 @@ Model ids are `alias/model`: `cc/` Claude Code, `cx/` Codex, `ag/` Antigravity, 
 - **Codex**: OpenAI only accepts `http://localhost:1455/auth/callback`. Run the dashboard on the machine where the browser is, or sign in, copy the full callback URL from the address bar of the error page, and paste it into the dialog. slimrouter extracts the code.
 - **Antigravity and Gemini CLI**: standard Google sign-in; the callback returns to `/oauth/callback` on this server, so use the hostname you opened the dashboard with.
 
-Tokens are refreshed automatically. When a refresh fails permanently the account shows an error and you sign in again.
+Tokens are refreshed in the background every 5 minutes, with or without traffic, so an idle account keeps its sign-in. You only sign in again when the provider revokes the account (password change, sign-out everywhere): the account then shows "Sign in again" on the Providers page. `DISABLE_BACKGROUND_REFRESH=1` turns the background refresh off.
 
 ## Routing in detail
 

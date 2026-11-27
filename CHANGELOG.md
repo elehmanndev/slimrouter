@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- OAuth accounts are refreshed in the background every 5 minutes, without traffic: any account whose token expires within 30 minutes (or the provider lead, 4 hours for Claude) or that is due by age (Codex, 8 days) is refreshed, one at a time with a pause between accounts. An idle account no longer loses its refresh token. Set `DISABLE_BACKGROUND_REFRESH=1` to turn it off.
+- A refresh token the provider rejects for good marks the account "Sign in again" on the Providers page and stops further refresh attempts until you sign in again. Signing in again with an account that is already connected now updates that account in place (priority, name and usage history kept) instead of adding a duplicate.
+- Claude sign-in and refresh use the endpoints current Claude Code uses (`claude.com/cai/oauth/authorize`, `platform.claude.com/v1/oauth/token`).
 - OAuth sign-in no longer needs a paste in the common case. The dashboard polls the server for the outcome, and when a provider only allows a localhost redirect (Claude on localhost at the dashboard's port, like 9router; Codex on 1455) copying the dead page's address is enough: the dialog reads the clipboard and finishes on its own. The paste box stays as a fallback.
 - Claude Code sign-in redirects to `http://localhost:<dashboard port>/callback`, the same pattern 9router uses. Anthropic accepts localhost on any port but only with the exact path `/callback`; `/oauth/callback` is rejected. The previous LAN-address redirect was rejected by Anthropic with "Redirect URI is not supported by client" before sign-in.
 - Round robin broke ties between accounts used in the same millisecond by priority, which could restart a streak on the wrong account. Ties now go to the account with the running streak.

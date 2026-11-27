@@ -160,7 +160,17 @@ export async function completeOAuth(input: { code: string; state?: string | null
     email = await claudeEmail(tokens.access_token);
   }
 
-  const count = (await import("./connections")).listConnections({ provider: provider.id }).length;
+  const { listConnections, updateConnection } = await import("./connections");
+  const existing = listConnections({ provider: provider.id });
+  // Signing in again with an account that is already connected replaces its tokens in place,
+  // keeping its priority, name and history, instead of adding a duplicate.
+  const same = email ? existing.find((c) => c.authType === "oauth" && c.email?.toLowerCase() === email!.toLowerCase()) : undefined;
+  if (same) {
+    return updateConnection(same.id, {
+      data: { ...data, lastError: null, lastErrorAt: null, reauthRequired: false, lockedUntil: null, backoffLevel: 0 },
+    })!;
+  }
+  const count = existing.length;
   return createConnection({
     provider: provider.id,
     authType: "oauth",
@@ -283,6 +293,7 @@ export async function refreshConnection(c: Connection): Promise<ConnectionData |
       patchConnectionData(c.id, {
         lastError: `Token refresh failed (${res.status})${permanent ? ": re-authorize this account" : ""}`,
         lastErrorAt: new Date().toISOString(),
+        ...(permanent ? { reauthRequired: true } : {}),
       });
       return null;
     }
@@ -294,6 +305,7 @@ export async function refreshConnection(c: Connection): Promise<ConnectionData |
       expiresAt: t.expires_in ? new Date(Date.now() + t.expires_in * 1000).toISOString() : c.data.expiresAt,
       lastRefreshAt: new Date().toISOString(),
       lastError: null,
+      reauthRequired: false,
     };
     const updated = patchConnectionData(c.id, patch);
     return updated?.data || null;
