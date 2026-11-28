@@ -63,6 +63,21 @@ function quotaBlocked(c: Connection, model: string | null): { blocked: boolean; 
   return hit ? { blocked: true, ...hit } : { blocked: false, until: null, reason: "" };
 }
 
+/**
+ * consume-first order: soonest upcoming weekly reset first, then priority. A window whose reset
+ * already passed is full again, so it sorts with the accounts whose reset is unknown.
+ */
+export function consumeFirstOrder(accounts: Connection[], model: string | null, now = Date.now()): Connection[] {
+  const resetOf = (c: Connection) => {
+    const weekly = guardWindows(readSnapshot(c.id), model).weekly;
+    const t = weekly?.resetAt ? Date.parse(weekly.resetAt) : NaN;
+    return Number.isFinite(t) && t > now ? t : Infinity;
+  };
+  const keyed = accounts.map((c) => ({ c, reset: resetOf(c) }));
+  keyed.sort((a, b) => (a.reset === b.reset ? a.c.priority - b.c.priority : a.reset - b.reset));
+  return keyed.map((k) => k.c);
+}
+
 export async function selectConnection(providerId: string, model: string | null, exclude: Set<string>): Promise<SelectResult> {
   return withLock(async () => {
     const all = listConnections({ provider: providerId, activeOnly: true });
@@ -107,6 +122,9 @@ export async function selectConnection(providerId: string, model: string | null,
         chosen = oldestFirst[0];
         patchConnectionData(chosen.id, { lastUsedAt: new Date().toISOString(), consecutiveUseCount: 1 });
       }
+    } else if (strat.strategy === "consume-first") {
+      chosen = consumeFirstOrder(available, model)[0];
+      patchConnectionData(chosen.id, { lastUsedAt: new Date().toISOString() });
     } else {
       chosen = available[0]; // already sorted by priority
       patchConnectionData(chosen.id, { lastUsedAt: new Date().toISOString() });

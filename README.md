@@ -8,7 +8,7 @@ It is a stripped-down rewrite of the ideas in 9router: the same OAuth clients an
 
 - **Provider onboarding**: OAuth sign-in for Claude Code, OpenAI Codex, Antigravity and Gemini CLI. API keys for Anthropic, OpenAI, Gemini, OpenRouter and any OpenAI compatible server (Ollama, vLLM, LM Studio).
 - **Endpoints**: `/v1/chat/completions`, `/v1/messages`, `/v1/responses` and `/v1/models`. Each one speaks the caller's dialect and translates to whatever the upstream needs, tool calls included.
-- **Multiple accounts per provider**: fill-first (drain one account, then the next) or round robin with a sticky count.
+- **Multiple accounts per provider**: fill-first (drain one account, then the next), round robin with a sticky count, or consume-first (spend the quota that resets soonest).
 - **Quota guard**: reads the 5 hour and weekly windows of each subscription and takes an account out of rotation when less than N percent remains on either window. Thresholds are per provider.
 - **Combos**: a model name of your choosing that tries members in order or rotates between them. Name one `claude-opus-5-5` and Claude Code will never know it is talking to GPT.
 - **Usage and quota panel**: requests, tokens, cache hit rate and the pay-as-you-go value of what you used, per model, account and API key. Live meters for every subscription window with reset countdowns.
@@ -85,6 +85,7 @@ For every request the gateway resolves the model (combo or `alias/model`), lists
 
 - **fill-first**: the first account in the list.
 - **round-robin**: the account used least recently, after the current one has served `sticky` requests in a row.
+- **consume-first**: the account whose weekly window resets soonest, so quota that is about to expire is spent first. Accounts with no known reset come last, by priority. Needs the quota reader of the provider (Claude, Codex, Antigravity).
 
 A 429 or a quota error locks that account for that model with exponential backoff (2 s doubling up to 5 min, or the reset time the provider reports, capped at 30 min) and the next account is tried immediately. Auth errors lock the whole account for 2 minutes after a token refresh attempt. A 400 that the request itself caused is returned as is and the account is not punished.
 

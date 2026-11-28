@@ -41,7 +41,7 @@ interface Conn {
   quota: QuotaSnapshot | null;
 }
 interface Strategy {
-  strategy: "fill-first" | "round-robin";
+  strategy: "fill-first" | "round-robin" | "consume-first";
   stickyLimit: number;
   minRemainingSessionPercent: number;
   minRemainingWeeklyPercent: number;
@@ -140,6 +140,7 @@ function ProviderGroup({ provider, providerId, list, strategy, defaults, onChang
               <SelectContent>
                 <SelectItem value="fill-first">Fill first</SelectItem>
                 <SelectItem value="round-robin">Round robin</SelectItem>
+                <SelectItem value="consume-first">Consume first</SelectItem>
               </SelectContent>
             </Select>
             {local.strategy === "round-robin" ? (

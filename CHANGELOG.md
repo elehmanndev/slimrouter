@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- New account strategy **consume-first**: the account whose weekly window resets soonest is used first, so quota that is about to expire is spent before quota that would carry over. Accounts without a known reset, or whose reset already passed, come after, by priority. Available per provider and as the default strategy.
 - OAuth accounts are refreshed in the background every 5 minutes, without traffic: any account whose token expires within 30 minutes (or the provider lead, 4 hours for Claude) or that is due by age (Codex, 8 days) is refreshed, one at a time with a pause between accounts. An idle account no longer loses its refresh token. Set `DISABLE_BACKGROUND_REFRESH=1` to turn it off.
 - A refresh token the provider rejects for good marks the account "Sign in again" on the Providers page and stops further refresh attempts until you sign in again. Signing in again with an account that is already connected now updates that account in place (priority, name and usage history kept) instead of adding a duplicate.
 - Claude sign-in and refresh use the endpoints current Claude Code uses (`claude.com/cai/oauth/authorize`, `platform.claude.com/v1/oauth/token`).

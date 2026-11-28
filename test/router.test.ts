@@ -55,6 +55,26 @@ describe("account selection", () => {
     db.getDb().prepare("DELETE FROM quota_snapshots WHERE connection_id = ?").run(a);
   });
 
+  it("consume-first picks the account whose weekly window resets soonest", async () => {
+    const put = (id: string, weeklyReset: string | null) => {
+      const snap = { connectionId: id, fetchedAt: new Date().toISOString(), plan: "plus", error: null, windows: [{ key: "weekly", label: "w", usedPercent: 30, remainingPercent: 70, resetAt: weeklyReset }] };
+      db.getDb().prepare("INSERT OR REPLACE INTO quota_snapshots (connection_id, fetched_at, data) VALUES (?, ?, ?)").run(id, snap.fetchedAt, JSON.stringify(snap));
+    };
+    settings.saveSettings({ providerStrategies: { codex: { strategy: "consume-first", stickyLimit: 1, minRemainingSessionPercent: 10, minRemainingWeeklyPercent: 10 } } });
+    put(a, new Date(Date.now() + 5 * 86400e3).toISOString());
+    put(b, new Date(Date.now() + 1 * 86400e3).toISOString());
+    expect((await router.selectConnection("codex", "m", new Set())).connection?.id).toBe(b);
+    // a reset that already passed means a full window again: it sorts after a known upcoming reset
+    put(b, new Date(Date.now() - 3600e3).toISOString());
+    expect((await router.selectConnection("codex", "m", new Set())).connection?.id).toBe(a);
+    // no known resets: falls back to priority
+    put(a, null);
+    put(b, null);
+    expect((await router.selectConnection("codex", "m", new Set())).connection?.id).toBe(a);
+    db.getDb().prepare("DELETE FROM quota_snapshots WHERE connection_id IN (?, ?)").run(a, b);
+    settings.saveSettings({ providerStrategies: { codex: { strategy: "fill-first", stickyLimit: 1, minRemainingSessionPercent: 10, minRemainingWeeklyPercent: 10 } } });
+  });
+
   it("locks a model after a 429 and clears it on success", async () => {
     const conn = connections.getConnection(a)!;
     const verdict = router.markFailure(conn, "m", 429, "rate limit exceeded");
