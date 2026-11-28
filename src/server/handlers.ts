@@ -176,6 +176,14 @@ export function visibleModels(key: ApiKey | null) {
   return allow?.length ? models.filter((m) => allow.includes(m.id)) : models;
 }
 
+/** GET /v1/usage: read-only quota and spend for a client key holder. */
+export async function handleUsage(req: Request) {
+  const auth = authenticate(req);
+  if (!auth.ok) return NextResponse.json({ error: { message: "Invalid or missing API key", type: "authentication_error" } }, { status: 401, headers: cors });
+  const { usageView } = await import("./usage-api");
+  return NextResponse.json(usageView(), { headers: cors });
+}
+
 export function handleModels(req: Request) {
   const auth = authenticate(req);
   if (!auth.ok) return errorBody("openai", 401, "Invalid or missing API key", null);

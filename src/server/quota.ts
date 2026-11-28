@@ -68,6 +68,53 @@ async function claudeQuota(token: string): Promise<Omit<QuotaSnapshot, "connecti
   return { plan: "Claude", windows, error: null };
 }
 
+/**
+ * A setup-token (user:inference only) cannot read the usage endpoint, but every /v1/messages
+ * response carries the account's unified 5h and 7d utilization in its rate-limit headers. One
+ * 1-output-token Haiku request reads them. A 429 with status "rejected" is a valid reading too.
+ */
+export function windowsFromUnifiedHeaders(h: Headers): QuotaWindow[] {
+  const out: QuotaWindow[] = [];
+  const add = (prefix: string, key: string, label: string) => {
+    const raw = h.get(`anthropic-ratelimit-unified-${prefix}-utilization`);
+    const frac = Number(raw);
+    if (raw === null || raw === "" || !Number.isFinite(frac) || frac < 0) return;
+    const used = pct(frac * 100);
+    out.push({ key, label, usedPercent: used, remainingPercent: 100 - used, resetAt: iso(h.get(`anthropic-ratelimit-unified-${prefix}-reset`)) });
+  };
+  add("5h", "session", "Session (5h)");
+  add("7d", "weekly", "Weekly (7d)");
+  return out;
+}
+
+export const HEADER_PROBE_MODEL = "claude-haiku-4-5-20251001";
+
+export async function claudeHeaderQuota(token: string): Promise<Omit<QuotaSnapshot, "connectionId" | "fetchedAt">> {
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${token}`,
+      "anthropic-beta": "oauth-2025-04-20",
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+      "user-agent": `claude-cli/${CLAUDE_CLI_VERSION} (external, cli)`,
+    },
+    body: JSON.stringify({ model: HEADER_PROBE_MODEL, max_tokens: 1, system: "You are Claude Code, Anthropic's official CLI for Claude.", messages: [{ role: "user", content: "hi" }] }),
+  });
+  await r.body?.cancel().catch(() => undefined);
+  const windows = windowsFromUnifiedHeaders(r.headers);
+  const rejected = r.headers.get("anthropic-ratelimit-unified-status") === "rejected";
+  if (!r.ok && !(r.status === 429 && rejected)) return { plan: null, windows: [], error: `header probe ${r.status}` };
+  // A refusal can bind below 100% on the reported windows (per-model or overage limit): mark
+  // the window whose reset matches the refusal, or every window when none does, as spent.
+  if (rejected && !windows.some((w) => w.remainingPercent === 0)) {
+    const resetAt = iso(r.headers.get("anthropic-ratelimit-unified-reset"));
+    const match = windows.filter((w) => resetAt && w.resetAt === resetAt);
+    for (const w of match.length ? match : windows) Object.assign(w, { usedPercent: 100, remainingPercent: 0 });
+  }
+  return { plan: "Claude (setup token)", windows, error: windows.length ? null : "no rate-limit headers" };
+}
+
 async function codexQuota(token: string): Promise<Omit<QuotaSnapshot, "connectionId" | "fetchedAt">> {
   const r = await fetch("https://chatgpt.com/backend-api/wham/usage", {
     headers: { authorization: `Bearer ${token}`, accept: "application/json" },
@@ -151,7 +198,9 @@ export async function fetchQuota(c: Connection, force = false): Promise<QuotaSna
       if (!token) throw new Error("no access token");
       const partial =
         provider.quota === "claude"
-          ? await claudeQuota(token)
+          ? fresh.data.setupToken
+            ? await claudeHeaderQuota(token)
+            : await claudeQuota(token)
           : provider.quota === "codex"
             ? await codexQuota(token)
             : await antigravityQuota(token, fresh.data.projectId || null);

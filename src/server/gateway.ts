@@ -1,5 +1,6 @@
 // The request pipeline: resolve model -> expand combo -> pick account -> call upstream -> decode -> encode for client.
 import { getProvider, PROVIDERS, type ProviderDef } from "./providers/registry";
+import { patchConnectionData } from "./connections";
 import { expandCombo, getCombo } from "./combos";
 import { ensureFresh, refreshConnection } from "./oauth";
 import { markFailure, markSuccess, selectConnection } from "./router";
@@ -111,6 +112,8 @@ async function executeTarget(target: ResolvedTarget, opts: ExecuteOptions): Prom
       }
     }
     if (!res.ok) {
+      // A setup-token has no refresh token: a 401 means it was revoked, so ask for a new one.
+      if (res.status === 401 && conn.data.setupToken) patchConnectionData(conn.id, { reauthRequired: true });
       const text = await res.text().catch(() => "");
       const message = extractErrorMessage(text) || res.statusText || `HTTP ${res.status}`;
       const resetMs = upstreamResetMs(res, text);

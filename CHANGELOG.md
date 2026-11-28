@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Claude accounts can be added from a `claude setup-token`: Providers, Connect Claude Code, "Paste a setup token instead". The token lasts a year and has no refresh token, so nothing can expire in between. It is checked with one 1-token request before it is saved; pasting again under the same name replaces it. The Providers page warns 30 days before it expires and when Anthropic revokes it.
+- Usage for setup-token accounts comes from the `anthropic-ratelimit-unified-*` headers of a 1-output-token Haiku request, because the usage endpoint needs a scope a setup token does not have. A 429 with status "rejected" counts as a spent window.
+- New read-only `GET /v1/usage` for any client key: every subscription account with its windows, whether the quota guard would skip it now and why, plus the last 24 hours of requests, tokens and cost. No tokens, emails or management rights. Meant for Paseo's Usage modal.
 - New account strategy **consume-first**: the account whose weekly window resets soonest is used first, so quota that is about to expire is spent before quota that would carry over. Accounts without a known reset, or whose reset already passed, come after, by priority. Available per provider and as the default strategy.
 - OAuth accounts are refreshed in the background every 5 minutes, without traffic: any account whose token expires within 30 minutes (or the provider lead, 4 hours for Claude) or that is due by age (Codex, 8 days) is refreshed, one at a time with a pause between accounts. An idle account no longer loses its refresh token. Set `DISABLE_BACKGROUND_REFRESH=1` to turn it off.
 - A refresh token the provider rejects for good marks the account "Sign in again" on the Providers page and stops further refresh attempts until you sign in again. Signing in again with an account that is already connected now updates that account in place (priority, name and usage history kept) instead of adding a duplicate.

@@ -21,6 +21,7 @@ export interface ConnectionData {
   lastError?: string | null;
   lastErrorAt?: string | null;
   reauthRequired?: boolean; // refresh token rejected for good: sign in again
+  setupToken?: boolean; // claude setup-token: 1-year inference-only token, no refresh
   pausedByGuard?: { reason: string; until: string | null } | null;
 }
 
@@ -148,6 +149,7 @@ export function publicConnection(c: Connection) {
       hasRefreshToken: !!refreshToken,
       hasAccessToken: !!accessToken || !!idToken,
       apiKeyPreview: apiKey ? `${apiKey.slice(0, 6)}…${apiKey.slice(-4)}` : null,
+      setupTokenDaysLeft: rest.setupToken && rest.expiresAt ? Math.floor((Date.parse(rest.expiresAt) - Date.now()) / 86400000) : null,
     },
   };
 }

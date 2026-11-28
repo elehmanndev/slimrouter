@@ -71,11 +71,17 @@ wire_api = "responses"
 
 Model ids are `alias/model`: `cc/` Claude Code, `cx/` Codex, `ag/` Antigravity, `gc/` Gemini CLI, `anthropic/`, `openai/`, `gemini/`, `openrouter/`, `oc/` for OpenAI compatible servers. Combos are called by their bare name.
 
+## Usage for clients
+
+`GET /v1/usage` with any client key returns every subscription account with its 5h and weekly windows, whether the quota guard would skip it now and why, and the last 24 hours of requests, tokens and cost. Read-only: no tokens, emails or management rights.
+
 ## OAuth notes
 
 - **Claude**: works like 9router. Anthropic only accepts a localhost redirect, so after you approve, the browser goes to `http://localhost:<dashboard port>/callback` (Anthropic rejects any other path). On the server itself that page completes the sign-in. From another machine it fails to load: copy its address and the dialog finishes by itself (or paste it).
 - **Codex**: OpenAI only accepts `http://localhost:1455/auth/callback`. Run the dashboard on the machine where the browser is, or sign in, copy the full callback URL from the address bar of the error page, and paste it into the dialog. slimrouter extracts the code.
 - **Antigravity and Gemini CLI**: standard Google sign-in; the callback returns to `/oauth/callback` on this server, so use the hostname you opened the dashboard with.
+
+**Claude setup tokens.** Instead of signing in, a Claude account can be added from the token `claude setup-token` prints (run it on any computer with a browser). It lasts a year, has no refresh token and needs no callback. Usage is read from the rate-limit headers of a 1-token request.
 
 Tokens are refreshed in the background every 5 minutes, with or without traffic, so an idle account keeps its sign-in. You only sign in again when the provider revokes the account (password change, sign-out everywhere): the account then shows "Sign in again" on the Providers page. `DISABLE_BACKGROUND_REFRESH=1` turns the background refresh off.
 
