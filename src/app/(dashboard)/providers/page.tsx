@@ -37,7 +37,7 @@ interface Conn {
   email: string | null;
   priority: number;
   isActive: boolean;
-  data: { lastError?: string | null; reauthRequired?: boolean; lockedUntil?: string | null; modelLocks?: Record<string, string>; expiresAt?: string | null; apiKeyPreview?: string | null; planType?: string | null; lastUsedAt?: string | null };
+  data: { lastError?: string | null; reauthRequired?: boolean; setupToken?: boolean; setupTokenDaysLeft?: number | null; lockedUntil?: string | null; modelLocks?: Record<string, string>; expiresAt?: string | null; apiKeyPreview?: string | null; planType?: string | null; lastUsedAt?: string | null };
   quota: QuotaSnapshot | null;
 }
 interface Strategy {
@@ -201,11 +201,12 @@ function ConnectionRow({ c, index, count, onMove, onChange }: { c: Conn; index: 
             {c.name} <span className="caption">#{c.priority}</span>
           </p>
           <p className="caption truncate">
-            {c.authType === "oauth" ? c.email || "subscription" : c.data.apiKeyPreview}
+            {c.authType === "oauth" ? (c.data.setupToken ? "setup token" : c.email || "subscription") : c.data.apiKeyPreview}
             {c.data.planType ? ` · ${c.data.planType}` : ""}
             {c.data.lastUsedAt ? ` · used ${fmtRelative(c.data.lastUsedAt)}` : ""}
           </p>
-          {c.data.reauthRequired ? <p className="truncate text-xs font-medium text-destructive">Sign in again: the provider rejected the refresh token</p> : null}
+          {c.data.reauthRequired ? <p className="truncate text-xs font-medium text-destructive">{c.data.setupToken ? "Token revoked: paste a new setup-token" : "Sign in again: the provider rejected the refresh token"}</p> : null}
+          {c.data.setupToken ? <SetupTokenExpiry days={c.data.setupTokenDaysLeft} /> : null}
           {c.data.lastError ? <p className="truncate text-xs text-destructive">{c.data.lastError}</p> : null}
         </div>
       </div>
@@ -235,6 +236,11 @@ function ConnectionRow({ c, index, count, onMove, onChange }: { c: Conn; index: 
   );
 }
 
+function SetupTokenExpiry({ days }: { days: number | null | undefined }) {
+  if (typeof days !== "number" || days > 30) return null;
+  return <p className="truncate text-xs text-destructive">{days <= 0 ? "Setup token expired: paste a new one" : `Setup token expires in ${days} days: run claude setup-token again`}</p>;
+}
+
 function AddDialog({ provider, onClose, onDone }: { provider: ProviderInfo; onClose: () => void; onDone: () => void }) {
   const [apiKey, setApiKey] = useState("");
   const [name, setName] = useState("");
@@ -242,6 +248,8 @@ function AddDialog({ provider, onClose, onDone }: { provider: ProviderInfo; onCl
   const [busy, setBusy] = useState(false);
   const [oauth, setOauth] = useState<{ authorizeUrl: string; state: string; redirectUri: string; manualPaste: boolean } | null>(null);
   const [code, setCode] = useState("");
+  const [mode, setMode] = useState<"oauth" | "token">("oauth");
+  const [setupToken, setSetupToken] = useState("");
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       if (e.data?.type === "slimrouter-oauth" && e.data.ok) {
@@ -357,7 +365,20 @@ function AddDialog({ provider, onClose, onDone }: { provider: ProviderInfo; onCl
       setBusy(false);
     }
   };
+  const saveSetupToken = async () => {
+    setBusy(true);
+    try {
+      const r = await api<{ connection: { name: string }; replaced: boolean }>("/api/admin/connections/setup-token", { method: "POST", json: { token: setupToken, name: name || undefined } });
+      toast.success(`${r.replaced ? "Replaced" : "Added"} ${r.connection.name}`);
+      onDone();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
   const codexHint = provider.id === "codex";
+  const canToken = provider.id === "claude";
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
@@ -389,8 +410,23 @@ function AddDialog({ provider, onClose, onDone }: { provider: ProviderInfo; onCl
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Work key" />
             </div>
           </div>
+        ) : canToken && mode === "token" ? (
+          <div className="flex flex-col gap-3">
+            <p className="caption">On a computer with a browser run <span className="font-mono">claude setup-token</span>, sign in with the account and paste the token it prints. It lasts a year and never needs a refresh. Usage is read from the rate-limit headers of a 1-token request.</p>
+            <div className="grid gap-1.5">
+              <Label>Setup token</Label>
+              <Input type="password" value={setupToken} onChange={(e) => setSetupToken(e.target.value.trim())} placeholder="sk-ant-oat01-…" autoFocus />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Name</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Calidad" />
+              <p className="caption">A setup token cannot read the account email, so the name is its label. Pasting again under the same name replaces the token.</p>
+            </div>
+            <button type="button" className="caption self-start underline" onClick={() => setMode("oauth")}>Sign in with the browser instead</button>
+          </div>
         ) : !oauth ? (
           <div className="flex flex-col gap-2 text-sm">
+            {canToken ? <button type="button" className="caption self-start underline" onClick={() => setMode("token")}>Paste a setup token instead (lasts a year)</button> : null}
             {codexHint ? <p className="caption">Codex redirects to localhost:1455. Run this dashboard on the same machine as your browser, or paste the full callback URL below after signing in.</p> : null}
             {provider.id === "claude" ? <p className="caption">After you approve, Claude sends you to a localhost page that will not load. Copy that page&apos;s address and come back here.</p> : null}
           </div>
@@ -414,6 +450,8 @@ function AddDialog({ provider, onClose, onDone }: { provider: ProviderInfo; onCl
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           {provider.auth === "apikey" ? (
             <Button disabled={busy || !apiKey.trim()} onClick={() => void saveKey()}>Add</Button>
+          ) : canToken && mode === "token" ? (
+            <Button disabled={busy || !setupToken || !name.trim()} onClick={() => void saveSetupToken()}>Add</Button>
           ) : !oauth ? (
             <Button disabled={busy} onClick={() => void start()}>Sign in</Button>
           ) : (
