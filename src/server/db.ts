@@ -66,7 +66,37 @@ CREATE TABLE IF NOT EXISTS quota_snapshots (
   data TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS mcp_calls (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts TEXT NOT NULL,
+  server TEXT NOT NULL,
+  tool TEXT NOT NULL,
+  api_key_id TEXT,
+  ok INTEGER NOT NULL,
+  duration_ms INTEGER,
+  error TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_mcp_calls_ts ON mcp_calls(ts DESC);
+CREATE TABLE IF NOT EXISTS mcp_servers (
+  name TEXT PRIMARY KEY,
+  transport TEXT NOT NULL,
+  config TEXT NOT NULL,
+  description TEXT,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
 `;
+
+// Columns added after a table first shipped. ALTER only when missing, so old databases upgrade in place.
+const MIGRATIONS: [table: string, column: string, ddl: string][] = [["api_keys", "allowed_mcp", "ALTER TABLE api_keys ADD COLUMN allowed_mcp TEXT"]];
+
+function migrate(d: DatabaseSync) {
+  for (const [table, column, ddl] of MIGRATIONS) {
+    const cols = d.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    if (!cols.some((c) => c.name === column)) d.exec(ddl);
+  }
+}
 
 export function getDb(): DatabaseSync {
   if (db) return db;
@@ -75,6 +105,7 @@ export function getDb(): DatabaseSync {
   db = new DatabaseSync(file);
   db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 5000;");
   db.exec(SCHEMA);
+  migrate(db);
   return db;
 }
 

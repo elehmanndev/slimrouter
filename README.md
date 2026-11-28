@@ -35,7 +35,7 @@ docker run -d --name slimrouter -p 20128:20128 \
 
 The published image is `linux/amd64`. On ARM, build it yourself with `docker compose build`.
 
-Data (SQLite database, session secret) lives in `/data`. Back up that directory and you have everything.
+Data (SQLite database, session secret, MCP caches) lives in `/data`. Back up that directory and you have everything.
 
 ### Unraid
 
@@ -70,6 +70,25 @@ wire_api = "responses"
 **OpenAI or Anthropic SDK**: base URL `http://localhost:20128/v1` (or without `/v1` for the Anthropic SDK), the slimrouter key as the API key, and any id from the Models page.
 
 Model ids are `alias/model`: `cc/` Claude Code, `cx/` Codex, `ag/` Antigravity, `gc/` Gemini CLI, `anthropic/`, `openai/`, `gemini/`, `openrouter/`, `oc/` for OpenAI compatible servers. Combos are called by their bare name.
+
+## MCP gateway
+
+slimrouter also distributes MCP servers. Add remote servers by URL or local ones by command on the **MCP servers** page, or import an mcphub `mcp_settings.json` (names, env, headers and tool switches are kept; a path map rewrites container paths).
+
+| URL | What the client sees |
+|---|---|
+| `/mcp` | every server the key may reach, tools named `<server>__<tool>` |
+| `/mcp/<name>` | one server with its original tool names (drop-in for an mcphub URL) |
+
+Clients authenticate with a client key (`Authorization: Bearer sk-slim-…`) whose **MCP access** includes the server; keys start with no MCP access. For Claude Code:
+
+```sh
+claude mcp add --transport http opm-sql http://localhost:20128/mcp/opm-sql --header "Authorization: Bearer sk-slim-..."
+```
+
+**claude.ai and Claude Desktop** add slimrouter as a custom connector with the URL alone: `/mcp` answers 401 with OAuth resource metadata and slimrouter runs the sign-in itself (dynamic registration, PKCE, refresh tokens). The consent page is behind the dashboard login and binds the connector to one client key. Behind a reverse proxy set `PUBLIC_URL` to the public origin, and only publish `/mcp`, `/oauth/*` and `/.well-known/*` if you do not want the dashboard and `/v1` reachable from the internet.
+
+Local servers run as children of slimrouter. The image carries node/npx, python3 with uv/uvx, git and setpriv; mount whatever files a server needs and point its command or env at them. A server that drops to another uid with `setpriv` needs the container started as root (`--user 0`) and its own `HOME` and `NPM_CONFIG_CACHE`.
 
 ## Usage for clients
 
