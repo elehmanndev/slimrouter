@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { getDb } from "./db";
 
-export const strategySchema = z.enum(["fill-first", "round-robin"]);
+// consume-first: the account whose weekly window resets soonest, so quota that is about to
+// expire is spent before quota that would carry over. Accounts without a known reset come last.
+export const strategySchema = z.enum(["fill-first", "round-robin", "consume-first"]);
 
 export const providerStrategySchema = z.object({
   strategy: strategySchema.default("fill-first"),

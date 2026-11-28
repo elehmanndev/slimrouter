@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { usePoll } from "@/hooks/use-poll";
 import { api } from "@/lib/api";
 
-interface Strategy { strategy: "fill-first" | "round-robin"; stickyLimit: number; minRemainingSessionPercent: number; minRemainingWeeklyPercent: number }
+interface Strategy { strategy: "fill-first" | "round-robin" | "consume-first"; stickyLimit: number; minRemainingSessionPercent: number; minRemainingWeeklyPercent: number }
 interface SettingsData { requireApiKey: boolean; defaultStrategy: Strategy; quotaRefreshSec: number; passwordSet: boolean }
 
 export default function SettingsPage() {
@@ -50,12 +50,13 @@ export default function SettingsPage() {
           <h2 className="mb-2 text-sm font-semibold">Default routing</h2>
           <p className="caption mb-3">Applied to every provider that has no override on the Providers page.</p>
           <div className="inset-group">
-            <Row label="Strategy" hint="Fill first drains one account before the next. Round robin rotates.">
+            <Row label="Strategy" hint="Fill first drains one account before the next. Round robin rotates. Consume first spends the quota that resets soonest.">
               <Select value={d.strategy} onValueChange={(v) => void save({ defaultStrategy: { ...d, strategy: v } })}>
                 <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="fill-first">Fill first</SelectItem>
                   <SelectItem value="round-robin">Round robin</SelectItem>
+                  <SelectItem value="consume-first">Consume first</SelectItem>
                 </SelectContent>
               </Select>
             </Row>
