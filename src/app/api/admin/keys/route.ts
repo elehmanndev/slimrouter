@@ -13,7 +13,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const denied = requireAdmin(req);
   if (denied) return denied;
-  const { name, allowedModels } = await readJson<{ name?: string; allowedModels?: string[] | null }>(req);
+  const { name, allowedModels, allowedMcp } = await readJson<{ name?: string; allowedModels?: string[] | null; allowedMcp?: unknown }>(req);
+  if (allowedMcp !== undefined && allowedMcp !== null && !(Array.isArray(allowedMcp) && allowedMcp.every((s) => typeof s === "string"))) return bad("allowedMcp must be a list of server names, [*] for all, or null");
   if (!name?.trim()) return bad("Name is required");
-  return ok(createApiKey(name.trim(), Array.isArray(allowedModels) && allowedModels.length ? allowedModels : null), 201);
+  return ok(createApiKey(name.trim(), Array.isArray(allowedModels) && allowedModels.length ? allowedModels : null, Array.isArray(allowedMcp) && allowedMcp.length ? (allowedMcp as string[]) : null), 201);
 }

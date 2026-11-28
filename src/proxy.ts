@@ -4,14 +4,15 @@ import { NextResponse, type NextRequest } from "next/server";
 // The real check happens in the route handlers (they have Node APIs); here we only redirect pages.
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const needsAuth = !pathname.startsWith("/login") && !pathname.startsWith("/api/") && !pathname.startsWith("/v1") && !pathname.startsWith("/oauth/callback") && pathname !== "/callback" &&!pathname.startsWith("/_next");
+  const needsAuth = !pathname.startsWith("/login") && !pathname.startsWith("/api/") && !pathname.startsWith("/v1") && !(pathname === "/mcp" || pathname.startsWith("/mcp/")) && !pathname.startsWith("/oauth/callback") && !pathname.startsWith("/.well-known/") && pathname !== "/oauth/register" && pathname !== "/oauth/token" && pathname !== "/oauth/revoke" && pathname !== "/callback" &&!pathname.startsWith("/_next");
   if (!needsAuth) return NextResponse.next();
   const hasCookie = !!request.cookies.get("slim_session")?.value;
   const passwordSet = !!process.env.DASHBOARD_PASSWORD || request.cookies.get("slim_pw")?.value === "1";
   if (passwordSet && !hasCookie) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("next", pathname);
+    url.search = "";
+    url.searchParams.set("next", pathname + request.nextUrl.search);
     return NextResponse.redirect(url);
   }
   return NextResponse.next();

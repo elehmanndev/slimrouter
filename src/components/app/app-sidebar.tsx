@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Activity, Gauge, KeyRound, Layers, LogOut, Plug, Settings, Waypoints } from "lucide-react";
+import { Activity, Blocks, Gauge, KeyRound, Layers, LogOut, Plug, Settings, Waypoints } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -22,6 +22,7 @@ const nav = [
   { href: "/", label: "Overview", icon: Gauge },
   { href: "/providers", label: "Providers", icon: Plug },
   { href: "/models", label: "Models & combos", icon: Layers },
+  { href: "/mcp-servers", label: "MCP servers", icon: Blocks },
   { href: "/keys", label: "API keys", icon: KeyRound },
   { href: "/usage", label: "Usage", icon: Activity },
   { href: "/quota", label: "Quota", icon: Waypoints },
@@ -42,7 +43,7 @@ export function AppSidebar() {
               </div>
               <div className="grid flex-1 text-left leading-tight">
                 <span className="truncate font-semibold tracking-tight">slimrouter</span>
-                <span className="truncate text-xs text-muted-foreground">AI gateway</span>
+                <span className="truncate text-xs text-muted-foreground">AI and MCP gateway</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
